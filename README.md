@@ -2,7 +2,7 @@
 
 **Complete Full-Stack Restaurant Discovery & Review Platform**
 
-## 📊 Project Overview
+## 📊 LAB assignment Overview
 
 A production-ready Yelp-like application built with modern web technologies. Features user authentication, restaurant search with advanced filters, review system with ratings, favorites management, and AI chatbot integration.
 
