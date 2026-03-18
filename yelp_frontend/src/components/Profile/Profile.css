@@ -1,0 +1,114 @@
+.profile-container {
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.profile-card,
+.preferences-card {
+  background: white;
+  border-radius: 10px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.profile-card h2,
+.preferences-card h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 25px;
+  color: #333;
+  border-bottom: 2px solid #d1345b;
+  padding-bottom: 15px;
+}
+
+.profile-card .form-label,
+.preferences-card .form-label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.profile-card .form-control,
+.preferences-card .form-control,
+.profile-card .form-select,
+.preferences-card .form-select {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.profile-card .form-control:focus,
+.preferences-card .form-control:focus,
+.profile-card .form-select:focus,
+.preferences-card .form-select:focus {
+  border-color: #d1345b;
+  box-shadow: 0 0 0 0.2rem rgba(209, 52, 91, 0.25);
+}
+
+.profile-card .btn-danger,
+.preferences-card .btn-danger {
+  background-color: #d1345b;
+  border-color: #d1345b;
+  padding: 10px 30px;
+  font-weight: 600;
+}
+
+.profile-card .btn-danger:hover,
+.preferences-card .btn-danger:hover {
+  background-color: #c12547;
+  border-color: #c12547;
+}
+
+.preferences-section {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.preferences-section:last-child {
+  border-bottom: none;
+}
+
+.preferences-section h5 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.checkbox-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.checkbox-group .form-check,
+.radio-group .form-check {
+  margin-bottom: 0;
+}
+
+.checkbox-group .form-check-input,
+.radio-group .form-check-input {
+  cursor: pointer;
+  border-color: #ddd;
+}
+
+.checkbox-group .form-check-input:checked,
+.radio-group .form-check-input:checked {
+  background-color: #d1345b;
+  border-color: #d1345b;
+}
+
+.radio-group {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.radio-group .form-check-label,
+.checkbox-group .form-check-label {
+  cursor: pointer;
+  user-select: none;
+  margin-left: 8px;
+}
