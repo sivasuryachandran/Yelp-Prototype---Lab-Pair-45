@@ -1,255 +1,525 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Form, Button, Card, Spinner, Alert } from 'react-bootstrap';
-import { restaurantsAPI, favoritesAPI } from '../../services/api';
-import { Link } from 'react-router-dom';
-import authService from '../../services/auth';
-import StarRatings from 'react-star-ratings';
-import { FaHeart, FaRegHeart, FaMapMarkerAlt, FaPhone } from 'react-icons/fa';
-import './Restaurant.css';
+import React, { useEffect, useState } from "react";
+import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Badge } from "react-bootstrap";
+import { Link } from "react-router-dom";
+import { FaMapMarkerAlt, FaUtensils, FaStar, FaRegStar, FaPhoneAlt } from "react-icons/fa";
+import "./Restaurant.css";
+
+import { restaurantsAPI, favoritesAPI } from "../../services/api";
+import authService from "../../services/auth";
+
+const fallbackRestaurantImages = [
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?auto=format&fit=crop&w=1200&q=80",
+];
+
+const quickCuisineOptions = ["Italian", "Mexican", "Chinese", "Indian", "Japanese", "American"];
+
+function getListFromValue(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  return String(value)
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function toSearchableText(value) {
+  if (!value) return "";
+
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item)).join(" ");
+  }
+
+  if (typeof value === "object") {
+    return Object.values(value)
+      .map((item) => String(item))
+      .join(" ");
+  }
+
+  return String(value);
+}
+
+function matchesFilters(restaurant, filters) {
+  const nameFilter = filters.name?.trim().toLowerCase() || "";
+  const cuisineFilter = filters.cuisine?.trim().toLowerCase() || "";
+  const cityFilter = filters.city?.trim().toLowerCase() || "";
+  const keywordFilter = filters.keyword?.trim().toLowerCase() || "";
+
+  if (nameFilter) {
+    const restaurantName = toSearchableText(restaurant.name).toLowerCase();
+    if (!restaurantName.includes(nameFilter)) return false;
+  }
+
+  if (cuisineFilter) {
+    const cuisineText = [restaurant.cuisine_type, restaurant.cuisine]
+      .map(toSearchableText)
+      .join(" ")
+      .toLowerCase();
+
+    if (!cuisineText.includes(cuisineFilter)) return false;
+  }
+
+  if (cityFilter) {
+    const cityText = [restaurant.city, restaurant.state]
+      .map(toSearchableText)
+      .join(" ")
+      .toLowerCase();
+
+    if (!cityText.includes(cityFilter)) return false;
+  }
+
+  if (keywordFilter) {
+    const searchableText = [
+      restaurant.name,
+      restaurant.cuisine_type,
+      restaurant.cuisine,
+      restaurant.city,
+      restaurant.state,
+      restaurant.description,
+      restaurant.amenities,
+      restaurant.keywords,
+      restaurant.pricing_tier,
+    ]
+      .map(toSearchableText)
+      .join(" ")
+      .toLowerCase();
+
+    if (!searchableText.includes(keywordFilter)) return false;
+  }
+
+  return true;
+}
 
 function RestaurantSearch() {
   const userId = authService.getUserId();
+
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [favorites, setFavorites] = useState({});
+  const [favoritesLoading, setFavoritesLoading] = useState({});
+  const [error, setError] = useState("");
+
   const [filters, setFilters] = useState({
-    name: '',
-    cuisine: '',
-    city: '',
-    keywords: '',
+    name: "",
+    cuisine: "",
+    city: "",
+    keyword: "",
   });
 
   useEffect(() => {
-    searchRestaurants();
+    fetchRestaurants();
   }, []);
 
-  const searchRestaurants = async (searchParams = filters) => {
+  const fetchRestaurants = async (customFilters = filters) => {
     setLoading(true);
-    setError('');
-    try {
-      const response = await restaurantsAPI.search(searchParams);
-      setRestaurants(response.data);
+    setError("");
 
-      // Check favorites for each restaurant
-      if (userId && response.data.length > 0) {
-        const favData = {};
-        for (const restaurant of response.data) {
-          try {
-            const favResponse = await favoritesAPI.check(userId, restaurant.id);
-            favData[restaurant.id] = favResponse.data.is_favorite;
-          } catch {}
+    try {
+      const params = {};
+
+      if (customFilters.name?.trim()) params.name = customFilters.name.trim();
+      if (customFilters.cuisine?.trim()) params.cuisine = customFilters.cuisine.trim();
+      if (customFilters.city?.trim()) params.city = customFilters.city.trim();
+      if (customFilters.keyword?.trim()) params.keyword = customFilters.keyword.trim();
+
+      const response = await restaurantsAPI.search(params);
+      const restaurantsData = Array.isArray(response?.data) ? response.data : [];
+
+      const filteredRestaurantsData = restaurantsData.filter((restaurant) =>
+        matchesFilters(restaurant, customFilters)
+      );
+
+      let enrichedRestaurants = filteredRestaurantsData.map((restaurant, index) => {
+        const storedImage = sessionStorage.getItem(`restaurant_image_${restaurant.id}`);
+
+        return {
+          ...restaurant,
+          isFavorite: false,
+          favoriteId: null,
+          average_rating:
+            restaurant?.average_rating !== null && restaurant?.average_rating !== undefined
+              ? Number(restaurant.average_rating)
+              : 0,
+          review_count:
+            restaurant?.review_count !== null && restaurant?.review_count !== undefined
+              ? Number(restaurant.review_count)
+              : 0,
+          image_url:
+            restaurant?.image_url ||
+            storedImage ||
+            fallbackRestaurantImages[index % fallbackRestaurantImages.length],
+          amenitiesList: getListFromValue(restaurant?.amenities),
+          keywordsList: getListFromValue(restaurant?.keywords),
+        };
+      });
+
+      if (userId) {
+        try {
+          const favoriteChecks = await Promise.all(
+            enrichedRestaurants.map(async (restaurant) => {
+              try {
+                const favoriteResponse = await favoritesAPI.check(userId, restaurant.id);
+                return {
+                  restaurantId: restaurant.id,
+                  isFavorite: !!favoriteResponse?.data?.is_favorite,
+                  favoriteId: favoriteResponse?.data?.favorite_id || null,
+                };
+              } catch {
+                return {
+                  restaurantId: restaurant.id,
+                  isFavorite: false,
+                  favoriteId: null,
+                };
+              }
+            })
+          );
+
+          enrichedRestaurants = enrichedRestaurants.map((restaurant) => {
+            const match = favoriteChecks.find((fav) => fav.restaurantId === restaurant.id);
+            return {
+              ...restaurant,
+              isFavorite: match ? match.isFavorite : false,
+              favoriteId: match ? match.favoriteId : null,
+            };
+          });
+        } catch {
+          /* keep restaurants even if favorite checks fail */
         }
-        setFavorites(favData);
       }
+
+      setRestaurants(enrichedRestaurants);
     } catch (err) {
-      setError('Failed to search restaurants');
+      console.error("Search failed:", err);
+      setError("Failed to search restaurants");
+      setRestaurants([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFilterChange = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const handleSearch = () => {
-    searchRestaurants(filters);
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchRestaurants(filters);
+  };
+
+  const handleQuickCuisine = (cuisine) => {
+    const updatedFilters = {
+      ...filters,
+      cuisine,
+    };
+    setFilters(updatedFilters);
+    fetchRestaurants(updatedFilters);
+  };
+
+  const clearFilters = () => {
+    const resetFilters = {
+      name: "",
+      cuisine: "",
+      city: "",
+      keyword: "",
+    };
+    setFilters(resetFilters);
+    fetchRestaurants(resetFilters);
   };
 
   const toggleFavorite = async (restaurantId) => {
     if (!userId) {
-      alert('Please log in to add favorites');
+      alert("Please log in to add favorites");
       return;
     }
 
+    setFavoritesLoading((prev) => ({
+      ...prev,
+      [restaurantId]: true,
+    }));
+
     try {
-      if (favorites[restaurantId]) {
-        // Find the favorite and remove it
-        // In a real app, you'd need to store the favorite ID
-        setFavorites((prev) => ({ ...prev, [restaurantId]: false }));
+      const restaurant = restaurants.find((r) => r.id === restaurantId);
+      if (!restaurant) return;
+
+      if (restaurant.isFavorite) {
+        if (restaurant.favoriteId) {
+          await favoritesAPI.remove(restaurant.favoriteId);
+        }
+
+        setRestaurants((prev) =>
+          prev.map((r) =>
+            r.id === restaurantId
+              ? { ...r, isFavorite: false, favoriteId: null }
+              : r
+          )
+        );
       } else {
-        await favoritesAPI.add(restaurantId, userId);
-        setFavorites((prev) => ({ ...prev, [restaurantId]: true }));
+        const response = await favoritesAPI.add(restaurantId, userId);
+
+        setRestaurants((prev) =>
+          prev.map((r) =>
+            r.id === restaurantId
+              ? {
+                  ...r,
+                  isFavorite: true,
+                  favoriteId: response?.data?.id || null,
+                }
+              : r
+          )
+        );
       }
     } catch (err) {
-      alert('Failed to update favorite');
+      console.error("Favorite toggle failed:", err);
+      alert("Failed to update favorite");
+    } finally {
+      setFavoritesLoading((prev) => ({
+        ...prev,
+        [restaurantId]: false,
+      }));
     }
   };
 
   return (
-    <Container fluid className="restaurant-search py-5">
-      <div className="search-header">
-        <h1>Find Your Next Favorite Restaurant</h1>
-        <p>Discover amazing restaurants in your area</p>
-      </div>
+    <div className="restaurant-search">
+      <section className="search-header">
+        <Container>
+          <h1>Find the right spot</h1>
+          <p>Search restaurants, cuisines, neighborhoods, and keywords.</p>
+        </Container>
+      </section>
 
-      {/* Search Filters */}
-      <Row className="search-filters mb-4">
-        <Col md={12}>
+      <Container>
+        <section className="search-filters">
           <Card className="filter-card">
             <Card.Body>
-              <Row>
-                <Col md={3}>
-                  <Form.Group>
-                    <Form.Label>Restaurant Name</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Search by name..."
-                      name="name"
-                      value={filters.name}
-                      onChange={handleFilterChange}
-                    />
-                  </Form.Group>
-                </Col>
+              <Form onSubmit={handleSearch}>
+                <Row className="g-3 align-items-end">
+                  <Col lg={3} md={6}>
+                    <Form.Group>
+                      <Form.Label>Restaurant Name</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Search by name"
+                        name="name"
+                        value={filters.name}
+                        onChange={handleChange}
+                      />
+                    </Form.Group>
+                  </Col>
 
-                <Col md={3}>
-                  <Form.Group>
-                    <Form.Label>Cuisine</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="e.g., Italian..."
-                      name="cuisine"
-                      value={filters.cuisine}
-                      onChange={handleFilterChange}
-                    />
-                  </Form.Group>
-                </Col>
+                  <Col lg={3} md={6}>
+                    <Form.Group>
+                      <Form.Label>Cuisine</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Italian, Indian, Sushi..."
+                        name="cuisine"
+                        value={filters.cuisine}
+                        onChange={handleChange}
+                      />
+                    </Form.Group>
+                  </Col>
 
-                <Col md={3}>
-                  <Form.Group>
-                    <Form.Label>City</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="e.g., New York..."
-                      name="city"
-                      value={filters.city}
-                      onChange={handleFilterChange}
-                    />
-                  </Form.Group>
-                </Col>
+                  <Col lg={2} md={6}>
+                    <Form.Group>
+                      <Form.Label>City</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="San Jose"
+                        name="city"
+                        value={filters.city}
+                        onChange={handleChange}
+                      />
+                    </Form.Group>
+                  </Col>
 
-                <Col md={3}>
-                  <Form.Group>
-                    <Form.Label>Keywords</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="e.g., outdoor seating..."
-                      name="keywords"
-                      value={filters.keywords}
-                      onChange={handleFilterChange}
-                    />
-                  </Form.Group>
-                </Col>
-              </Row>
+                  <Col lg={2} md={6}>
+                    <Form.Group>
+                      <Form.Label>Keywords</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Outdoor seating, vegan, parking..."
+                        name="keyword"
+                        value={filters.keyword}
+                        onChange={handleChange}
+                      />
+                    </Form.Group>
+                  </Col>
 
-              <Button
-                variant="danger"
-                onClick={handleSearch}
-                className="mt-3"
-                disabled={loading}
-              >
-                {loading ? 'Searching...' : 'Search'}
-              </Button>
+                  <Col lg={2} md={12} className="d-grid">
+                    <Button variant="danger" type="submit">
+                      Search
+                    </Button>
+                  </Col>
+                </Row>
+
+                <div className="quick-filters">
+                  <div className="quick-filters-label">Popular:</div>
+                  <div className="quick-filter-list">
+                    {quickCuisineOptions.map((cuisine) => (
+                      <Button
+                        key={cuisine}
+                        type="button"
+                        variant="light"
+                        className="quick-filter-btn"
+                        onClick={() => handleQuickCuisine(cuisine)}
+                      >
+                        {cuisine}
+                      </Button>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline-secondary"
+                      className="quick-filter-btn"
+                      onClick={clearFilters}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+              </Form>
             </Card.Body>
           </Card>
-        </Col>
-      </Row>
+        </section>
 
-      {error && <Alert variant="danger">{error}</Alert>}
+        <section className="restaurant-results">
+          {error && (
+            <Alert variant="danger" className="mt-3">
+              {error}
+            </Alert>
+          )}
 
-      {/* Results */}
-      {loading && (
-        <div className="text-center py-5">
-          <Spinner animation="border" variant="danger" />
-        </div>
-      )}
-
-      <Row className="restaurant-results">
-        {restaurants.map((restaurant) => (
-          <Col md={6} lg={4} key={restaurant.id} className="mb-4">
-            <Card className="restaurant-card h-100">
-              <div className="restaurant-image">
-                {/* Colorful placeholder with emoji based on cuisine */}
-                {restaurant.cuisine_type === 'Italian' || restaurant.cuisine_type === 'italian' ? '🍝' :
-                 restaurant.cuisine_type === 'Japanese' || restaurant.cuisine_type === 'japanese' ? '🍣' :
-                 restaurant.cuisine_type === 'Mexican' || restaurant.cuisine_type === 'mexican' ? '🌮' :
-                 restaurant.cuisine_type === 'Chinese' || restaurant.cuisine_type === 'chinese' ? '🥢' :
-                 restaurant.cuisine_type === 'Indian' || restaurant.cuisine_type === 'indian' ? '🍛' :
-                 restaurant.cuisine_type === 'American' || restaurant.cuisine_type === 'american' ? '🍔' :
-                 restaurant.cuisine_type === 'Thai' || restaurant.cuisine_type === 'thai' ? '🍜' :
-                 restaurant.cuisine_type === 'French' || restaurant.cuisine_type === 'french' ? '🥐' :
-                 restaurant.cuisine_type === 'Greek' || restaurant.cuisine_type === 'greek' ? '🌯' :
-                 restaurant.cuisine_type === 'Spanish' || restaurant.cuisine_type === 'spanish' ? '🥘' :
-                 '🍽️'}
+          {loading ? (
+            <div className="loading-state">
+              <Spinner animation="border" />
+              <p>Loading restaurants...</p>
+            </div>
+          ) : restaurants.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-card">
+                <h4>No restaurants found</h4>
+                <p>Try adjusting your search filters or trying a different cuisine.</p>
               </div>
-              <Card.Body>
-                <div className="restaurant-header">
-                  <div>
-                    <h5>{restaurant.name || 'Restaurant'}</h5>
-                    <p className="cuisine-type">{restaurant.cuisine_type || 'Cuisine'}</p>
-                  </div>
-                  <button
-                    className="favorite-btn"
-                    onClick={() => toggleFavorite(restaurant.id)}
-                  >
-                    {favorites[restaurant.id] ? (
-                      <FaHeart className="active" />
-                    ) : (
-                      <FaRegHeart />
-                    )}
-                  </button>
-                </div>
+            </div>
+          ) : (
+            <>
+              <div className="results-toolbar">
+                <h3>Restaurants</h3>
+                <span>{restaurants.length} result{restaurants.length !== 1 ? "s" : ""}</span>
+              </div>
 
-                <div className="rating-section mb-2">
-                  <StarRatings
-                    rating={restaurant.average_rating || 0}
-                    starDimension="20px"
-                    starSpacing="2px"
-                    starEmptyColor="#ddd"
-                    starRatedColor="#ffc107"
-                    isSelectable={false}
-                  />
-                  <span className="review-count">
-                    ({restaurant.review_count || 0} reviews)
-                  </span>
-                </div>
+              <Row className="g-4">
+                {restaurants.map((restaurant) => (
+                  <Col key={restaurant.id} lg={4} md={6}>
+                    <Card className="restaurant-card h-100">
+                      <div className="restaurant-image">
+                        <img
+                          src={restaurant.image_url}
+                          alt={restaurant.name || "Restaurant"}
+                          onError={(e) => {
+                            e.currentTarget.src =
+                              "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80";
+                          }}
+                        />
+                      </div>
 
-                <div className="restaurant-info mb-3">
-                  {restaurant.pricing_tier && (
-                    <p>
-                      <strong>Price:</strong> {restaurant.pricing_tier}
-                    </p>
-                  )}
-                  <p>
-                    <FaMapMarkerAlt /> {restaurant.address}, {restaurant.city}
-                  </p>
-                  {restaurant.phone && (
-                    <p>
-                      <FaPhone /> {restaurant.phone}
-                    </p>
-                  )}
-                </div>
+                      <Card.Body>
+                        <div className="restaurant-header">
+                          <div>
+                            <h5>{restaurant.name}</h5>
+                            <p className="cuisine-type">
+                              <FaUtensils /> {restaurant.cuisine_type || restaurant.cuisine || "Restaurant"}
+                            </p>
+                          </div>
 
-                <Link
-                  to={`/restaurants/${restaurant.id}`}
-                  className="btn btn-danger btn-sm w-100"
-                >
-                  View Details
-                </Link>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+                          <button
+                            type="button"
+                            className="favorite-btn"
+                            onClick={() => toggleFavorite(restaurant.id)}
+                            disabled={favoritesLoading[restaurant.id]}
+                            aria-label={
+                              restaurant.isFavorite ? "Remove from favorites" : "Add to favorites"
+                            }
+                          >
+                            {restaurant.isFavorite ? <FaStar className="active" /> : <FaRegStar />}
+                          </button>
+                        </div>
 
-      {!loading && restaurants.length === 0 && (
-        <div className="text-center py-5">
-          <p className="text-muted">No restaurants found. Try adjusting your search criteria.</p>
-        </div>
-      )}
-    </Container>
+                        <div className="rating-section">
+                          <Badge bg="danger" className="rating-badge">
+                            {(restaurant.average_rating ?? 0).toFixed(1)}
+                          </Badge>
+                          <span className="review-count">
+                            {restaurant.review_count} review
+                            {restaurant.review_count !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+
+                        <div className="restaurant-info">
+                          <p>
+                            <FaMapMarkerAlt />
+                            <span>
+                              {[restaurant.city, restaurant.state].filter(Boolean).join(", ") ||
+                                "Location unavailable"}
+                            </span>
+                          </p>
+
+                          {restaurant.phone && (
+                            <p>
+                              <FaPhoneAlt />
+                              <span>{restaurant.phone}</span>
+                            </p>
+                          )}
+                        </div>
+
+                        {restaurant.amenitiesList.length > 0 && (
+                          <div className="keyword-row">
+                            {restaurant.amenitiesList.slice(0, 3).map((amenity, idx) => (
+                              <span key={idx} className="keyword-chip">
+                                {amenity}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {restaurant.keywordsList.length > 0 && (
+                          <div className="keyword-row">
+                            {restaurant.keywordsList.slice(0, 3).map((keyword, idx) => (
+                              <span key={idx} className="keyword-chip">
+                                {keyword}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="card-actions">
+                          <Button
+                            as={Link}
+                            to={`/restaurants/${restaurant.id}`}
+                            variant="outline-danger"
+                          >
+                            View Details
+                          </Button>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            </>
+          )}
+        </section>
+      </Container>
+    </div>
   );
 }
 

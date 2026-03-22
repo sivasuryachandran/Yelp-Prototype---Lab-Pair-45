@@ -1,90 +1,162 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Spinner, Button, Alert, Form } from 'react-bootstrap';
-import { useParams, Link } from 'react-router-dom';
-import { restaurantsAPI, reviewsAPI, favoritesAPI } from '../../services/api';
-import authService from '../../services/auth';
-import StarRatings from 'react-star-ratings';
-import { FaHeart, FaRegHeart, FaMapMarkerAlt, FaPhone, FaClock } from 'react-icons/fa';
-import './Restaurant.css';
+import React, { useState, useEffect } from "react";
+import { Container, Row, Col, Card, Spinner, Button, Alert, Badge } from "react-bootstrap";
+import { useParams, Link, useLocation } from "react-router-dom";
+import { restaurantsAPI, reviewsAPI, favoritesAPI } from "../../services/api";
+import authService from "../../services/auth";
+import StarRatings from "react-star-ratings";
+import {
+  FaHeart,
+  FaRegHeart,
+  FaMapMarkerAlt,
+  FaPhone,
+  FaClock,
+  FaUtensils,
+  FaArrowLeft,
+} from "react-icons/fa";
+import "./Restaurant.css";
+
+const fallbackRestaurantImages = [
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1600&q=80",
+];
+
+function safeText(value, fallback = "") {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "object") return JSON.stringify(value);
+  return fallback;
+}
+
+function formatHours(hours) {
+  if (!hours) return "";
+  if (typeof hours === "string") return hours;
+  if (Array.isArray(hours)) return hours.join(", ");
+  if (typeof hours === "object") {
+    const entries = Object.entries(hours);
+    if (entries.length === 0) return "";
+    return entries
+      .map(([day, value]) => `${day}: ${typeof value === "string" ? value : JSON.stringify(value)}`)
+      .join(" | ");
+  }
+  return "";
+}
+
+function getAmenitiesList(amenities) {
+  if (!amenities) return [];
+  if (Array.isArray(amenities)) {
+    return amenities.map((item) => String(item).trim()).filter(Boolean);
+  }
+  return String(amenities)
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 function RestaurantDetails() {
   const { id } = useParams();
+  const location = useLocation();
   const userId = authService.getUserId();
+
   const [restaurant, setRestaurant] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewData, setReviewData] = useState({
-    rating: 5,
-    comment: '',
-  });
+  const [favoriteId, setFavoriteId] = useState(null);
 
   useEffect(() => {
-    fetchRestaurantDetails();
-    fetchReviews();
+    loadPageData();
   }, [id]);
+
+  const loadPageData = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      await Promise.all([fetchRestaurantDetails(), fetchReviews()]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchRestaurantDetails = async () => {
     try {
       const response = await restaurantsAPI.getDetails(id);
-      setRestaurant(response.data);
+      const data = response.data;
+
+      const storedImage = sessionStorage.getItem(`restaurant_image_${id}`);
+      const createdImageFromState = location.state?.createdImageUrl || "";
+
+      const safeRestaurant = {
+        ...data,
+        average_rating:
+          data?.average_rating !== null && data?.average_rating !== undefined
+            ? Number(data.average_rating)
+            : 0,
+        review_count:
+          data?.review_count !== null && data?.review_count !== undefined
+            ? Number(data.review_count)
+            : 0,
+        image_url:
+          data?.image_url ||
+          createdImageFromState ||
+          storedImage ||
+          fallbackRestaurantImages[Number(id) % fallbackRestaurantImages.length],
+      };
+
+      setRestaurant(safeRestaurant);
 
       if (userId) {
-        const favResponse = await favoritesAPI.check(userId, id);
-        setIsFavorite(favResponse.data.is_favorite);
+        try {
+          const favResponse = await favoritesAPI.check(userId, id);
+          setIsFavorite(!!favResponse?.data?.is_favorite);
+          setFavoriteId(favResponse?.data?.favorite_id || null);
+        } catch (favErr) {
+          console.error("Favorite check failed:", favErr);
+        }
       }
     } catch (err) {
-      setError('Failed to load restaurant details');
+      console.error("Failed to load restaurant details:", err);
+      setError("Failed to load restaurant details");
     }
   };
 
   const fetchReviews = async () => {
     try {
       const response = await reviewsAPI.getByRestaurant(id);
-      setReviews(response.data);
+      setReviews(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
-      setError('Failed to load reviews');
-    } finally {
-      setLoading(false);
+      console.error("Failed to load reviews:", err);
+      setError("Failed to load reviews");
+      setReviews([]);
     }
   };
 
   const toggleFavorite = async () => {
     if (!userId) {
-      alert('Please log in to add favorites');
+      alert("Please log in to add favorites");
       return;
     }
 
     try {
       if (isFavorite) {
+        if (favoriteId) {
+          await favoritesAPI.remove(favoriteId);
+        }
         setIsFavorite(false);
+        setFavoriteId(null);
       } else {
-        await favoritesAPI.add(id, userId);
+        const response = await favoritesAPI.add(id, userId);
         setIsFavorite(true);
+        setFavoriteId(response?.data?.id || null);
       }
     } catch (err) {
-      alert('Failed to update favorite');
-    }
-  };
-
-  const handleSubmitReview = async (e) => {
-    e.preventDefault();
-
-    if (!userId) {
-      alert('Please log in to submit a review');
-      return;
-    }
-
-    try {
-      await reviewsAPI.create(id, userId, reviewData);
-      setReviewData({ rating: 5, comment: '' });
-      setShowReviewForm(false);
-      fetchReviews();
-      fetchRestaurantDetails();
-    } catch (err) {
-      alert('Failed to submit review');
+      alert(err.response?.data?.detail || "Failed to update favorite");
     }
   };
 
@@ -107,190 +179,205 @@ function RestaurantDetails() {
     );
   }
 
+  const safeAverageRating = Number(restaurant?.average_rating) || 0;
+  const safeReviewCount = Number(restaurant?.review_count) || 0;
+  const amenitiesList = getAmenitiesList(restaurant?.amenities);
+
   return (
-    <Container className="restaurant-details py-5">
-      {error && <Alert variant="danger">{error}</Alert>}
+    <div className="restaurant-details-page">
+      <section className="detail-hero">
+        <img
+          src={restaurant.image_url}
+          alt={safeText(restaurant.name, "Restaurant")}
+          className="detail-hero-image"
+          onError={(e) => {
+            e.currentTarget.src = fallbackRestaurantImages[0];
+          }}
+        />
+        <div className="detail-hero-overlay" />
+        <Container className="detail-hero-content">
+          <Link to="/" className="back-link">
+            <FaArrowLeft /> Back to Search
+          </Link>
 
-      {/* Restaurant Header */}
-      <Row className="mb-4">
-        <Col md={8}>
-          <div className="restaurant-header-detail">
-            <h1>{restaurant.name}</h1>
-            <p className="cuisine-type mb-2">{restaurant.cuisine_type}</p>
+          <div className="detail-title-block">
+            <h1>{safeText(restaurant.name, "Restaurant")}</h1>
 
-            <div className="rating-section mb-3">
-              <StarRatings
-                rating={restaurant.average_rating}
-                starDimension="24px"
-                starSpacing="2px"
-                starEmptyColor="#ddd"
-                starRatedColor="#ffc107"
-                isSelectable={false}
-              />
-              <span className="review-count">
-                {restaurant.average_rating.toFixed(1)} ({restaurant.review_count} reviews)
+            <div className="detail-subtitle">
+              <span className="detail-cuisine">
+                <FaUtensils /> {safeText(restaurant.cuisine_type || restaurant.cuisine, "Restaurant")}
               </span>
             </div>
 
-            <div className="restaurant-info-detail mb-4">
-              <p>
-                <FaMapMarkerAlt /> {restaurant.address}, {restaurant.city}{' '}
-                {restaurant.zip_code && `, ${restaurant.zip_code}`}
-              </p>
-              {restaurant.phone && (
-                <p>
-                  <FaPhone /> {restaurant.phone}
-                </p>
-              )}
-              {restaurant.hours_of_operation && (
-                <p>
-                  <FaClock /> Hours vary
-                </p>
-              )}
-              {restaurant.pricing_tier && (
-                <p>
-                  <strong>Price Range:</strong> {restaurant.pricing_tier}
-                </p>
-              )}
+            <div className="detail-rating-row">
+              <StarRatings
+                rating={safeAverageRating}
+                starDimension="22px"
+                starSpacing="2px"
+                starEmptyColor="#ddd"
+                starRatedColor="#d32323"
+                isSelectable={false}
+              />
+              <Badge bg="danger" className="detail-rating-badge">
+                {safeAverageRating.toFixed(1)}
+              </Badge>
+              <span className="detail-review-count">
+                {safeReviewCount} review{safeReviewCount !== 1 ? "s" : ""}
+              </span>
             </div>
-
-            {restaurant.description && (
-              <div className="description mb-4">
-                <p>{restaurant.description}</p>
-              </div>
-            )}
           </div>
-        </Col>
+        </Container>
+      </section>
 
-        <Col md={4}>
-          <Card className="action-card">
-            <Card.Body>
-              <Button
-                variant={isFavorite ? 'danger' : 'outline-danger'}
-                className="w-100 mb-2"
-                onClick={toggleFavorite}
-              >
-                {isFavorite ? (
-                  <>
-                    <FaHeart /> Remove from Favorites
-                  </>
-                ) : (
-                  <>
-                    <FaRegHeart /> Add to Favorites
-                  </>
-                )}
-              </Button>
+      <Container className="py-4">
+        {error && <Alert variant="danger">{error}</Alert>}
 
-              <Button
-                variant="danger"
-                className="w-100"
-                onClick={() => setShowReviewForm(!showReviewForm)}
-              >
-                Write a Review
-              </Button>
-            </Card.Body>
-          </Card>
-
-          {/* Review Form */}
-          {showReviewForm && userId && (
-            <Card className="action-card mt-3">
+        <Row className="g-4">
+          <Col lg={8}>
+            <Card className="detail-main-card mb-4">
               <Card.Body>
-                <h6>Write a Review</h6>
-                <Form onSubmit={handleSubmitReview}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Rating</Form.Label>
-                    <div>
-                      <StarRatings
-                        rating={reviewData.rating}
-                        starDimension="30px"
-                        starSpacing="3px"
-                        starEmptyColor="#ddd"
-                        starRatedColor="#ffc107"
-                        changeRating={(value) =>
-                          setReviewData((prev) => ({ ...prev, rating: value }))
-                        }
-                      />
+                <h4 className="section-title">About</h4>
+
+                <div className="restaurant-info-detail">
+                  <p>
+                    <FaMapMarkerAlt />
+                    <span>
+                      {[
+                        safeText(restaurant.address),
+                        safeText(restaurant.city),
+                        safeText(restaurant.zip_code),
+                      ]
+                        .filter(Boolean)
+                        .join(", ") || "Address unavailable"}
+                    </span>
+                  </p>
+
+                  {restaurant.phone && (
+                    <p>
+                      <FaPhone />
+                      <span>{safeText(restaurant.phone)}</span>
+                    </p>
+                  )}
+
+                  {restaurant.hours_of_operation && (
+                    <p>
+                      <FaClock />
+                      <span>{formatHours(restaurant.hours_of_operation)}</span>
+                    </p>
+                  )}
+
+                  {restaurant.pricing_tier && (
+                    <p>
+                      <strong>Price Range:</strong>
+                      <span className="ms-1">{safeText(restaurant.pricing_tier)}</span>
+                    </p>
+                  )}
+                </div>
+
+                {restaurant.description && (
+                  <div className="description-box">
+                    <p>{safeText(restaurant.description)}</p>
+                  </div>
+                )}
+
+                {amenitiesList.length > 0 && (
+                  <div className="amenities-box">
+                    <h5 className="amenities-title">Amenities</h5>
+                    <div className="amenities-list">
+                      {amenitiesList.map((amenity, idx) => (
+                        <span key={idx} className="amenity-chip">
+                          {amenity}
+                        </span>
+                      ))}
                     </div>
-                  </Form.Group>
-
-                  <Form.Group className="mb-3">
-                    <Form.Label>Your Review</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={4}
-                      placeholder="Share your experience..."
-                      value={reviewData.comment}
-                      onChange={(e) =>
-                        setReviewData((prev) => ({
-                          ...prev,
-                          comment: e.target.value,
-                        }))
-                      }
-                    />
-                  </Form.Group>
-
-                  <Button variant="danger" type="submit" className="w-100 mb-2">
-                    Submit Review
-                  </Button>
-                  <Button
-                    variant="outline-secondary"
-                    className="w-100"
-                    onClick={() => setShowReviewForm(false)}
-                  >
-                    Cancel
-                  </Button>
-                </Form>
+                  </div>
+                )}
               </Card.Body>
             </Card>
-          )}
-        </Col>
-      </Row>
 
-      {/* Reviews Section */}
-      <Row>
-        <Col md={8}>
-          <div className="reviews-section">
-            <h3>Customer Reviews</h3>
+            <Card className="detail-main-card">
+              <Card.Body>
+                <div className="reviews-header">
+                  <h4 className="section-title mb-0">Customer Reviews</h4>
+                  <span className="reviews-header-count">
+                    {reviews.length} review{reviews.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
 
-            {reviews.length === 0 ? (
-              <p className="text-muted">No reviews yet. Be the first to review this restaurant!</p>
-            ) : (
-              reviews.map((review) => (
-                <Card key={review.id} className="review-card mb-3">
-                  <Card.Body>
-                    <div className="review-header mb-2">
-                      <div>
-                        <strong>{review.author?.name || 'Anonymous'}</strong>
-                        <div className="review-rating">
-                          <StarRatings
-                            rating={review.rating}
-                            starDimension="16px"
-                            starSpacing="1px"
-                            starEmptyColor="#ddd"
-                            starRatedColor="#ffc107"
-                            isSelectable={false}
-                          />
+                {reviews.length === 0 ? (
+                  <div className="empty-review-state">
+                    <p>No reviews yet. Be the first to review this restaurant.</p>
+                  </div>
+                ) : (
+                  reviews.map((review) => (
+                    <Card key={review.id} className="review-card mb-3">
+                      <Card.Body>
+                        <div className="review-header">
+                          <div>
+                            <strong>{safeText(review.author?.name, "Anonymous")}</strong>
+                            <div className="review-rating">
+                              <StarRatings
+                                rating={Number(review.rating) || 0}
+                                starDimension="16px"
+                                starSpacing="1px"
+                                starEmptyColor="#ddd"
+                                starRatedColor="#d32323"
+                                isSelectable={false}
+                              />
+                            </div>
+                          </div>
+
+                          <small className="text-muted">
+                            {review.created_at
+                              ? new Date(review.created_at).toLocaleDateString()
+                              : ""}
+                          </small>
                         </div>
-                      </div>
-                      <small className="text-muted">
-                        {new Date(review.created_at).toLocaleDateString()}
-                      </small>
-                    </div>
-                    {review.comment && <p>{review.comment}</p>}
-                  </Card.Body>
-                </Card>
-              ))
-            )}
-          </div>
-        </Col>
-      </Row>
 
-      <div className="mt-4">
-        <Link to="/" className="btn btn-outline-danger">
-          ← Back to Search
-        </Link>
-      </div>
-    </Container>
+                        {review.comment && (
+                          <p className="review-comment">{safeText(review.comment)}</p>
+                        )}
+                      </Card.Body>
+                    </Card>
+                  ))
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+
+          <Col lg={4}>
+            <Card className="action-card mb-3">
+              <Card.Body>
+                <Button
+                  variant={isFavorite ? "danger" : "outline-danger"}
+                  className="w-100 mb-2"
+                  onClick={toggleFavorite}
+                >
+                  {isFavorite ? (
+                    <>
+                      <FaHeart /> Remove from Favorites
+                    </>
+                  ) : (
+                    <>
+                      <FaRegHeart /> Add to Favorites
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  as={Link}
+                  to={`/restaurants/${id}/review`}
+                  variant="danger"
+                  className="w-100"
+                >
+                  Write a Review
+                </Button>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+    </div>
   );
 }
 

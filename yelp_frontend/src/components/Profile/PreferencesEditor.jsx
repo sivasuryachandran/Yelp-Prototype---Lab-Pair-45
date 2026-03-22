@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Form, Button, Alert, Spinner, Row, Col } from 'react-bootstrap';
-import { usersAPI } from '../../services/api';
-import authService from '../../services/auth';
-import './Profile.css';
+import React, { useState, useEffect } from "react";
+import { Container, Form, Button, Alert, Spinner, Row, Col } from "react-bootstrap";
+import { usersAPI } from "../../services/api";
+import authService from "../../services/auth";
+import "./Profile.css";
 
 function PreferencesEditor() {
   const userId = authService.getUserId();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [preferences, setPreferences] = useState({
     cuisines: [],
-    price_range: '',
-    preferred_location: '',
+    price_range: "",
+    preferred_location: "",
     dietary_restrictions: [],
     ambiance: [],
-    sort_preference: 'rating',
+    sort_preference: "rating",
     search_radius: 5,
   });
 
@@ -26,9 +26,24 @@ function PreferencesEditor() {
   const fetchPreferences = async () => {
     try {
       const response = await usersAPI.getPreferences(userId);
-      setPreferences(response.data);
+      const data = response?.data || {};
+
+      setPreferences({
+        cuisines: Array.isArray(data.cuisines) ? data.cuisines : [],
+        price_range: data.price_range || "",
+        preferred_location: data.preferred_location || "",
+        dietary_restrictions: Array.isArray(data.dietary_restrictions)
+          ? data.dietary_restrictions
+          : [],
+        ambiance: Array.isArray(data.ambiance) ? data.ambiance : [],
+        sort_preference: data.sort_preference || "rating",
+        search_radius:
+          typeof data.search_radius === "number" && !Number.isNaN(data.search_radius)
+            ? data.search_radius
+            : 5,
+      });
     } catch (err) {
-      setError('Failed to load preferences');
+      setError("Failed to load preferences");
     } finally {
       setLoading(false);
     }
@@ -63,15 +78,15 @@ function PreferencesEditor() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
       await usersAPI.setPreferences(userId, preferences);
-      setSuccess('Preferences saved successfully!');
-      setTimeout(() => setSuccess(''), 3000);
+      setSuccess("Preferences saved successfully!");
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Save failed');
+      setError(err.response?.data?.detail || "Save failed");
     }
   };
 
@@ -83,47 +98,57 @@ function PreferencesEditor() {
     );
   }
 
-  const cuisines = ['Italian', 'Chinese', 'Mexican', 'Indian', 'Japanese', 'American', 'Thai', 'French'];
-  const dietary = ['Vegetarian', 'Vegan', 'Gluten-free', 'Halal', 'Kosher'];
-  const ambiances = ['Casual', 'Fine Dining', 'Family-friendly', 'Romantic', 'Quiet', 'Lively'];
+  const cuisines = [
+    "Italian",
+    "Chinese",
+    "Mexican",
+    "Indian",
+    "Japanese",
+    "American",
+    "Thai",
+    "French",
+  ];
+
+  const dietary = ["Vegetarian", "Vegan", "Gluten-free", "Halal", "Kosher"];
+
+  const ambiances = ["Casual", "Fine Dining", "Family-friendly", "Romantic", "Quiet", "Lively"];
 
   return (
-    <Container className="preferences-container py-5">
-      <Row>
-        <Col md={8}>
-          <div className="preferences-card">
-            <h2>AI Assistant Preferences</h2>
-            <p className="text-muted">
-              Customize your dining preferences for personalized restaurant recommendations
-            </p>
+    <div className="profile-container">
+      <Container className="py-4">
+        <Row className="justify-content-center">
+          <Col lg={9} xl={8}>
+            <div className="preferences-card">
+              <h2>Dining Preferences</h2>
+              <p className="text-muted">
+                Customize your dining preferences for more personalized restaurant
+                recommendations.
+              </p>
 
-            {error && <Alert variant="danger">{error}</Alert>}
-            {success && <Alert variant="success">{success}</Alert>}
+              {error && <Alert variant="danger">{error}</Alert>}
+              {success && <Alert variant="success">{success}</Alert>}
 
-            <Form onSubmit={handleSubmit}>
-              {/* Cuisines */}
-              <div className="preferences-section">
-                <h5>Cuisine Preferences</h5>
-                <div className="checkbox-group">
-                  {cuisines.map((cuisine) => (
-                    <Form.Check
-                      key={cuisine}
-                      type="checkbox"
-                      id={`cuisine-${cuisine}`}
-                      label={cuisine}
-                      checked={preferences.cuisines.includes(cuisine)}
-                      onChange={() => handleCuisineChange(cuisine)}
-                    />
-                  ))}
+              <Form onSubmit={handleSubmit}>
+                <div className="preferences-section">
+                  <h5>Cuisine Preferences</h5>
+                  <div className="checkbox-group">
+                    {cuisines.map((cuisine) => (
+                      <Form.Check
+                        key={cuisine}
+                        type="checkbox"
+                        id={`cuisine-${cuisine}`}
+                        label={cuisine}
+                        checked={preferences.cuisines.includes(cuisine)}
+                        onChange={() => handleCuisineChange(cuisine)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Price Range */}
-              <div className="preferences-section">
-                <h5>Price Range</h5>
-                <Form.Group>
+                <div className="preferences-section">
+                  <h5>Price Range</h5>
                   <div className="radio-group">
-                    {['$', '$$', '$$$', '$$$$'].map((price) => (
+                    {["$", "$$", "$$$", "$$$$"].map((price) => (
                       <Form.Check
                         key={price}
                         type="radio"
@@ -141,109 +166,110 @@ function PreferencesEditor() {
                       />
                     ))}
                   </div>
-                </Form.Group>
-              </div>
-
-              {/* Dietary Restrictions */}
-              <div className="preferences-section">
-                <h5>Dietary Restrictions</h5>
-                <div className="checkbox-group">
-                  {dietary.map((diet) => (
-                    <Form.Check
-                      key={diet}
-                      type="checkbox"
-                      id={`diet-${diet}`}
-                      label={diet}
-                      checked={preferences.dietary_restrictions.includes(diet)}
-                      onChange={() => handleDietaryChange(diet)}
-                    />
-                  ))}
                 </div>
-              </div>
 
-              {/* Ambiance */}
-              <div className="preferences-section">
-                <h5>Ambiance Preferences</h5>
-                <div className="checkbox-group">
-                  {ambiances.map((ambiance) => (
-                    <Form.Check
-                      key={ambiance}
-                      type="checkbox"
-                      id={`ambiance-${ambiance}`}
-                      label={ambiance}
-                      checked={preferences.ambiance.includes(ambiance)}
-                      onChange={() => handleAmbianceChange(ambiance)}
-                    />
-                  ))}
+                <div className="preferences-section">
+                  <h5>Dietary Restrictions</h5>
+                  <div className="checkbox-group">
+                    {dietary.map((diet) => (
+                      <Form.Check
+                        key={diet}
+                        type="checkbox"
+                        id={`diet-${diet}`}
+                        label={diet}
+                        checked={preferences.dietary_restrictions.includes(diet)}
+                        onChange={() => handleDietaryChange(diet)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Preferred Location */}
-              <div className="preferences-section">
-                <Form.Group className="mb-3">
-                  <Form.Label>Preferred Location</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="e.g., San Francisco, CA"
-                    value={preferences.preferred_location}
-                    onChange={(e) =>
-                      setPreferences((prev) => ({
-                        ...prev,
-                        preferred_location: e.target.value,
-                      }))
-                    }
-                  />
-                </Form.Group>
-              </div>
+                <div className="preferences-section">
+                  <h5>Ambiance Preferences</h5>
+                  <div className="checkbox-group">
+                    {ambiances.map((ambiance) => (
+                      <Form.Check
+                        key={ambiance}
+                        type="checkbox"
+                        id={`ambiance-${ambiance}`}
+                        label={ambiance}
+                        checked={preferences.ambiance.includes(ambiance)}
+                        onChange={() => handleAmbianceChange(ambiance)}
+                      />
+                    ))}
+                  </div>
+                </div>
 
-              {/* Search Radius */}
-              <div className="preferences-section">
-                <Form.Group className="mb-3">
-                  <Form.Label>Search Radius (miles)</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={preferences.search_radius}
-                    onChange={(e) =>
-                      setPreferences((prev) => ({
-                        ...prev,
-                        search_radius: parseInt(e.target.value),
-                      }))
-                    }
-                  />
-                </Form.Group>
-              </div>
+                <div className="preferences-section">
+                  <Row className="g-3">
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>Preferred Location</Form.Label>
+                        <Form.Control
+                          type="text"
+                          placeholder="e.g., San Jose, CA"
+                          value={preferences.preferred_location}
+                          onChange={(e) =>
+                            setPreferences((prev) => ({
+                              ...prev,
+                              preferred_location: e.target.value,
+                            }))
+                          }
+                        />
+                      </Form.Group>
+                    </Col>
 
-              {/* Sort Preference */}
-              <div className="preferences-section">
-                <Form.Group className="mb-3">
-                  <Form.Label>Sort By</Form.Label>
-                  <Form.Select
-                    value={preferences.sort_preference}
-                    onChange={(e) =>
-                      setPreferences((prev) => ({
-                        ...prev,
-                        sort_preference: e.target.value,
-                      }))
-                    }
-                  >
-                    <option value="rating">Rating</option>
-                    <option value="distance">Distance</option>
-                    <option value="popularity">Popularity</option>
-                    <option value="price">Price</option>
-                  </Form.Select>
-                </Form.Group>
-              </div>
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label>Radius (miles)</Form.Label>
+                        <Form.Control
+                          type="number"
+                          min="1"
+                          max="50"
+                          value={preferences.search_radius}
+                          onChange={(e) =>
+                            setPreferences((prev) => ({
+                              ...prev,
+                              search_radius: parseInt(e.target.value, 10) || 1,
+                            }))
+                          }
+                        />
+                      </Form.Group>
+                    </Col>
 
-              <Button variant="danger" type="submit" className="mt-3">
-                Save Preferences
-              </Button>
-            </Form>
-          </div>
-        </Col>
-      </Row>
-    </Container>
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label>Sort By</Form.Label>
+                        <Form.Select
+                          value={preferences.sort_preference}
+                          onChange={(e) =>
+                            setPreferences((prev) => ({
+                              ...prev,
+                              sort_preference: e.target.value,
+                            }))
+                          }
+                        >
+                          <option value="rating">Rating</option>
+                          <option value="distance">Distance</option>
+                          <option value="popularity">Popularity</option>
+                          <option value="price">Price</option>
+                        </Form.Select>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                </div>
+
+                <div className="d-flex justify-content-end">
+                  <Button variant="danger" type="submit">
+                    Save Preferences
+                  </Button>
+                </div>
+              </Form>
+            </div>
+          </Col>
+        </Row>
+      </Container>
+    </div>
   );
 }
 

@@ -41,7 +41,7 @@ function Signup() {
       );
       // Auto login after signup
       await authService.login(formData.email, formData.password);
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setError(err.detail || 'Signup failed. Please try again.');
     } finally {

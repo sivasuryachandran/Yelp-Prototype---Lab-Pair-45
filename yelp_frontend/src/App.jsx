@@ -1,95 +1,119 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Navbar, Nav, Container } from 'react-bootstrap';
-import authService from './services/auth';
-import Login from './components/Auth/Login';
-import Signup from './components/Auth/Signup';
-import ProfilePage from './components/Profile/ProfilePage';
-import PreferencesEditor from './components/Profile/PreferencesEditor';
-import RestaurantSearch from './components/Restaurant/RestaurantSearch';
-import RestaurantDetails from './components/Restaurant/RestaurantDetails';
-import AIChatbot from './components/ChatBot/AIChatbot';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
+import { Container, Navbar, Nav } from "react-bootstrap";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "./App.css";
 
-// Protected route wrapper
-function ProtectedRoute({ children }) {
-  const isAuthenticated = authService.isAuthenticated();
-  return isAuthenticated ? children : <Navigate to="/login" />;
-}
+import RestaurantSearch from "./components/Restaurant/RestaurantSearch";
+import RestaurantDetails from "./components/Restaurant/RestaurantDetails";
+import AddRestaurantForm from "./components/Restaurant/AddRestaurantForm";
+import WriteReviewPage from "./components/Restaurant/WriteReviewPage";
+import Login from "./components/Auth/Login";
+import Signup from "./components/Auth/Signup";
+import ProfilePage from "./components/Profile/ProfilePage";
+import PreferencesEditor from "./components/Profile/PreferencesEditor";
+import AIChatbot from "./components/ChatBot/AIChatbot";
+import ProtectedRoute from "./components/Auth/ProtectedRoute";
+import authService from "./services/auth";
 
-function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState('');
-  const [userRole, setUserRole] = useState('');
+function AppLayout() {
+  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(!!authService.getToken?.());
 
   useEffect(() => {
-    // Check if already logged in
-    if (authService.isAuthenticated()) {
-      setIsLoggedIn(true);
-      setUserRole(authService.getUserRole());
-      // In a real app, fetch user name from API
-      setUserName('User');
-    }
+    const syncAuth = () => {
+      setIsLoggedIn(!!authService.getToken?.());
+    };
+
+    window.addEventListener("authChanged", syncAuth);
+    window.addEventListener("storage", syncAuth);
+
+    return () => {
+      window.removeEventListener("authChanged", syncAuth);
+      window.removeEventListener("storage", syncAuth);
+    };
   }, []);
 
   const handleLogout = () => {
     authService.logout();
     setIsLoggedIn(false);
-    setUserName('');
-    setUserRole('');
-    window.location.href = '/';
+    navigate("/login");
   };
 
   return (
-    <Router>
-      <div className="app">
-        {/* Navigation */}
-        <Navbar expand="lg" sticky="top" className="navbar-custom">
-          <Container>
-            <Navbar.Brand href="/" className="brand-logo">
-              🍽️ Yelp Prototype - Lab Pair 45
-            </Navbar.Brand>
-            <Navbar.Toggle aria-controls="basic-navbar-nav" />
-            <Navbar.Collapse id="basic-navbar-nav">
-              <Nav className="ms-auto">
-                {!isLoggedIn ? (
-                  <>
-                    <Nav.Link href="/login">Sign In</Nav.Link>
-                    <Nav.Link href="/signup">Sign Up</Nav.Link>
-                  </>
-                ) : (
-                  <>
-                    <Nav.Link href="/">Explore</Nav.Link>
-                    <Nav.Link href="/chatbot">AI Assistant</Nav.Link>
-                    <Nav.Link href="/profile">Profile</Nav.Link>
-                    <Nav.Link href="/preferences">Preferences</Nav.Link>
-                    <Nav.Link onClick={handleLogout} className="cursor-pointer">
-                      Logout
-                    </Nav.Link>
-                  </>
-                )}
-              </Nav>
-            </Navbar.Collapse>
-          </Container>
-        </Navbar>
+    <div className="app">
+      <Navbar expand="lg" className="navbar-custom" sticky="top">
+        <Container>
+          <Navbar.Brand as={Link} to="/" className="brand-logo">
+            LocalEats
+          </Navbar.Brand>
 
-        {/* Routes */}
+          <Navbar.Toggle aria-controls="main-navbar-nav" />
+
+          <Navbar.Collapse id="main-navbar-nav">
+            <Nav className="ms-auto">
+              <Nav.Link as={Link} to="/">
+                Restaurants
+              </Nav.Link>
+
+              {isLoggedIn && (
+                <>
+                  <Nav.Link as={Link} to="/restaurants/new">
+                    Add Restaurant
+                  </Nav.Link>
+                  <Nav.Link as={Link} to="/chatbot">
+                    Assistant
+                  </Nav.Link>
+                  <Nav.Link as={Link} to="/profile">
+                    Profile
+                  </Nav.Link>
+                  <Nav.Link as={Link} to="/preferences">
+                    Preferences
+                  </Nav.Link>
+                </>
+              )}
+
+              {isLoggedIn ? (
+                <Nav.Link as="button" onClick={handleLogout} className="nav-link btn btn-link">
+                  Log Out
+                </Nav.Link>
+              ) : (
+                <>
+                  <Nav.Link as={Link} to="/login">
+                    Log In
+                  </Nav.Link>
+                  <Nav.Link as={Link} to="/signup">
+                    Sign Up
+                  </Nav.Link>
+                </>
+              )}
+            </Nav>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
+
+      <main>
         <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
           <Route path="/" element={<RestaurantSearch />} />
           <Route path="/restaurants/:id" element={<RestaurantDetails />} />
-
-          {/* Protected Routes */}
           <Route
-            path="/chatbot"
+            path="/restaurants/new"
             element={
               <ProtectedRoute>
-                <AIChatbot />
+                <AddRestaurantForm />
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/restaurants/:id/review"
+            element={
+              <ProtectedRoute>
+                <WriteReviewPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route
             path="/profile"
             element={
@@ -106,25 +130,48 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Catch all */}
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route
+            path="/chatbot"
+            element={
+              <ProtectedRoute>
+                <AIChatbot />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
+      </main>
 
-        {/* Footer */}
-        <footer className="footer mt-5">
-          <Container>
-            <div className="footer-content">
-              <p>&copy; 2024 Yelp Prototype. All rights reserved.</p>
-              <nav className="footer-nav">
-                <a href="#about">About</a>
-                <a href="#contact">Contact</a>
-                <a href="#privacy">Privacy</a>
-              </nav>
+      <footer className="footer">
+        <Container>
+          <div className="footer-content">
+            <p>© 2026 LocalEats</p>
+            <div className="footer-nav">
+              <Link to="/">Restaurants</Link>
+              {isLoggedIn ? (
+                <>
+                  <Link to="/restaurants/new">Add Restaurant</Link>
+                  <Link to="/chatbot">Assistant</Link>
+                  <Link to="/profile">Profile</Link>
+                  <Link to="/preferences">Preferences</Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/login">Log In</Link>
+                  <Link to="/signup">Sign Up</Link>
+                </>
+              )}
             </div>
-          </Container>
-        </footer>
-      </div>
+          </div>
+        </Container>
+      </footer>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppLayout />
     </Router>
   );
 }
