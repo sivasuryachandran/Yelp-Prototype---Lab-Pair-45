@@ -4,7 +4,7 @@ Full-Stack Restaurant Discovery and Review Platform with AI-Powered Recommendati
 
 ## Assignment Information
 
-- Course: AB 1 Assignment
+- Course: DATA 236 - Distributed Systems - LAB 1 
 - Title: Yelp Prototype - Using FastAPI and ReactJS + Agentic AI
 - Due Date: March 24, 2026, 11:59 PM
 - Total Points: 40
