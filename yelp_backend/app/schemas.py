@@ -145,7 +145,7 @@ class ReviewResponse(BaseModel):
 
 # ============ AI Assistant Schemas ============
 class ChatMessage(BaseModel):
-    role: str  # "user" or "assistant"
+    role: str
     content: str
 
 
@@ -166,8 +166,6 @@ class RecommendationItem(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     recommendations: Optional[List[RecommendationItem]] = None
-
-
 # ============ Favorite Schemas ============
 class FavoriteCreate(BaseModel):
     restaurant_id: int
