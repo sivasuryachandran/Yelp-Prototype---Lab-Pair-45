@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Seed database with sample restaurant data for testing
-This script adds sample restaurants to make the app functional during development
+Seed database with sample restaurant and user data for testing
+This script adds sample restaurants and users to make the app functional during development
 """
 
 import sys
@@ -14,9 +14,11 @@ sys.path.insert(0, str(app_dir))
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models import Base, Restaurant, User, UserPreference
+from app.utils.security import hash_password
 
-# Database URL - using SQLite for development
-DATABASE_URL = "sqlite:///./yelp_dev.db"
+# Database URL - using absolute path for consistency
+db_path = Path(__file__).parent / "yelp_dev.db"
+DATABASE_URL = f"sqlite:///{db_path}"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -25,15 +27,71 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base.metadata.create_all(bind=engine)
 
 def seed_data():
-    """Add sample restaurants to database"""
+    """Add sample restaurants and users to database"""
     db = SessionLocal()
     
     try:
         # Check if data already exists
-        existing = db.query(Restaurant).first()
-        if existing:
+        existing_restaurants = db.query(Restaurant).first()
+        existing_users = db.query(User).first()
+        
+        if existing_restaurants and existing_users:
             print("✓ Database already contains data. Skipping seed.")
             return
+        
+        # Sample users for testing
+        users = [
+            User(
+                name="Test User",
+                email="testuser@example.com",
+                password_hash=hash_password("TestPass123!"),
+                phone="555-0001",
+                city="San Francisco",
+                country="United States",
+                state="CA",
+                languages="English",
+                gender="Other",
+                about_me="A regular food enthusiast",
+                role="user"
+            ),
+            User(
+                name="Restaurant Owner",
+                email="owner@example.com",
+                password_hash=hash_password("OwnerPass123!"),
+                phone="555-0002",
+                city="New York",
+                country="United States",
+                state="NY",
+                languages="English",
+                gender="Male",
+                about_me="Professional restaurant owner",
+                role="owner"
+            ),
+            User(
+                name="Admin User",
+                email="admin@example.com",
+                password_hash=hash_password("AdminPass123!"),
+                phone="555-0003",
+                city="Los Angeles",
+                country="United States",
+                state="CA",
+                languages="English",
+                gender="Female",
+                about_me="System administrator",
+                role="user"
+            )
+        ]
+        
+        # Add users to database
+        for user in users:
+            db.add(user)
+        
+        db.commit()
+        print(f"✓ Successfully added {len(users)} sample users!")
+        
+        # Print user summary
+        for u in users:
+            print(f"  • {u.name} ({u.email}) - Role: {u.role}")
         
         # Sample restaurants
         restaurants = [
@@ -146,17 +204,19 @@ def seed_data():
         db.commit()
         print(f"✓ Successfully added {len(restaurants)} sample restaurants!")
         
-        # Print summary
+        # Print restaurant summary
         for r in restaurants:
             print(f"  • {r.name} ({r.cuisine_type}) - {r.city}")
             
     except Exception as e:
         db.rollback()
         print(f"✗ Error seeding database: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         db.close()
 
 if __name__ == "__main__":
-    print("🌱 Seeding database with sample restaurant data...\n")
+    print("🌱 Seeding database with sample data...\n")
     seed_data()
     print("\n✓ Complete!")

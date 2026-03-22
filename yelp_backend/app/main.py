@@ -31,13 +31,22 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Yelp Prototype API",
-    description="FastAPI backend for Yelp prototype with AI assistant for restaurant recommendations",
+    title="LabPair-45 Eats API",
+    description="FastAPI backend for LabPair-45 Eats with AI assistant for restaurant recommendations, search, reviews, favorites, and user preferences management",
     version="1.0.0",
     lifespan=lifespan,
     openapi_url="/api/openapi.json",
     docs_url="/api/docs",
     redoc_url="/api/redoc"
+)
+
+# Add CORS middleware FIRST - before routes are registered
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Custom OpenAPI schema
@@ -70,15 +79,6 @@ def custom_openapi():
     return app.openapi_schema
 
 app.openapi = custom_openapi
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Include routers
 app.include_router(auth.router)
