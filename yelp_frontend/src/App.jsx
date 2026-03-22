@@ -8,6 +8,9 @@ import RestaurantSearch from "./components/Restaurant/RestaurantSearch";
 import RestaurantDetails from "./components/Restaurant/RestaurantDetails";
 import AddRestaurantForm from "./components/Restaurant/AddRestaurantForm";
 import WriteReviewPage from "./components/Restaurant/WriteReviewPage";
+import FavoritesList from "./components/Restaurant/FavoritesList";
+import UserHistory from "./components/Restaurant/UserHistory";
+import OwnerDashboard from "./components/Restaurant/OwnerDashboard";
 import Login from "./components/Auth/Login";
 import Signup from "./components/Auth/Signup";
 import ProfilePage from "./components/Profile/ProfilePage";
@@ -45,7 +48,7 @@ function AppLayout() {
       <Navbar expand="lg" className="navbar-custom" sticky="top">
         <Container>
           <Navbar.Brand as={Link} to="/" className="brand-logo">
-            LocalEats
+            LabPair-45 Eats
           </Navbar.Brand>
 
           <Navbar.Toggle aria-controls="main-navbar-nav" />
@@ -60,6 +63,15 @@ function AppLayout() {
                 <>
                   <Nav.Link as={Link} to="/restaurants/new">
                     Add Restaurant
+                  </Nav.Link>
+                  <Nav.Link as={Link} to="/favorites">
+                    Favorites
+                  </Nav.Link>
+                  <Nav.Link as={Link} to="/history">
+                    History
+                  </Nav.Link>
+                  <Nav.Link as={Link} to="/owner/dashboard">
+                    Dashboard
                   </Nav.Link>
                   <Nav.Link as={Link} to="/chatbot">
                     Assistant
@@ -138,13 +150,37 @@ function AppLayout() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/favorites"
+            element={
+              <ProtectedRoute>
+                <FavoritesList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute>
+                <UserHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/owner/dashboard"
+            element={
+              <ProtectedRoute>
+                <OwnerDashboard />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </main>
 
       <footer className="footer">
         <Container>
           <div className="footer-content">
-            <p>© 2026 LocalEats</p>
+            <p>© 2026 LabPair-45 Eats</p>
             <div className="footer-nav">
               <Link to="/">Restaurants</Link>
               {isLoggedIn ? (

@@ -150,6 +150,7 @@ function RestaurantSearch() {
               ? Number(restaurant.review_count)
               : 0,
           image_url:
+            restaurant?.photo_data ||
             restaurant?.image_url ||
             storedImage ||
             fallbackRestaurantImages[index % fallbackRestaurantImages.length],

@@ -10,6 +10,7 @@ function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -21,13 +22,23 @@ function ProfilePage() {
     gender: '',
   });
 
+  console.log('ProfilePage loaded, userId:', userId);
+
   useEffect(() => {
+    if (!userId) {
+      console.error('No userId found in localStorage');
+      setError('User not logged in. Please login first.');
+      setLoading(false);
+      return;
+    }
     fetchProfile();
-  }, []);
+  }, [userId]);
 
   const fetchProfile = async () => {
     try {
+      console.log('Fetching profile for userId:', userId);
       const response = await usersAPI.getProfile(userId);
+      console.log('Profile response:', response);
       setProfile(response.data);
       setFormData({
         name: response.data.name || '',
@@ -40,7 +51,9 @@ function ProfilePage() {
         gender: response.data.gender || '',
       });
     } catch (err) {
-      setError('Failed to load profile');
+      console.error('Error fetching profile:', err);
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to load profile';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -56,12 +69,22 @@ function ProfilePage() {
     setError('');
     setSuccess('');
 
+    if (!userId) {
+      setError('User not logged in. Please refresh and login again.');
+      return;
+    }
+
     try {
+      console.log('Updating profile for user:', userId);
+      console.log('Form data:', formData);
+      
       await usersAPI.updateProfile(userId, formData);
       setSuccess('Profile updated successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Update failed');
+      console.error('Update error:', err);
+      const errorMessage = err.response?.data?.detail || err.message || 'Update failed';
+      setError(errorMessage);
     }
   };
 
@@ -95,12 +118,76 @@ function ProfilePage() {
       <Row>
         <Col md={8}>
           <div className="profile-card">
-            <h2>Edit Profile</h2>
-
             {error && <Alert variant="danger">{error}</Alert>}
             {success && <Alert variant="success">{success}</Alert>}
 
-            <Form onSubmit={handleSubmit}>
+            {!isEditing ? (
+              <>
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <h2>My Profile</h2>
+                  <Button variant="outline-danger" onClick={() => setIsEditing(true)}>
+                    Edit Profile
+                  </Button>
+                </div>
+
+                <div className="profile-info">
+                  <Row>
+                    <Col md={6} className="mb-3">
+                      <p><strong>Full Name:</strong></p>
+                      <p>{profile?.name || 'Not provided'}</p>
+                    </Col>
+                    <Col md={6} className="mb-3">
+                      <p><strong>Email:</strong></p>
+                      <p>{profile?.email || 'Not provided'}</p>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6} className="mb-3">
+                      <p><strong>Phone:</strong></p>
+                      <p>{profile?.phone || 'Not provided'}</p>
+                    </Col>
+                    <Col md={6} className="mb-3">
+                      <p><strong>City:</strong></p>
+                      <p>{profile?.city || 'Not provided'}</p>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6} className="mb-3">
+                      <p><strong>Country:</strong></p>
+                      <p>{profile?.country || 'Not provided'}</p>
+                    </Col>
+                    <Col md={6} className="mb-3">
+                      <p><strong>State:</strong></p>
+                      <p>{profile?.state || 'Not provided'}</p>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6} className="mb-3">
+                      <p><strong>Languages:</strong></p>
+                      <p>{profile?.languages || 'Not provided'}</p>
+                    </Col>
+                    <Col md={6} className="mb-3">
+                      <p><strong>Gender:</strong></p>
+                      <p>{profile?.gender || 'Not provided'}</p>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={12} className="mb-3">
+                      <p><strong>About Me:</strong></p>
+                      <p>{profile?.about_me || 'Not provided'}</p>
+                    </Col>
+                  </Row>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2>Edit Profile</h2>
+
+                <Form onSubmit={handleSubmit}>
               <Row>
                 <Col md={6}>
                   <Form.Group className="mb-3">
@@ -221,10 +308,15 @@ function ProfilePage() {
                 </Col>
               </Row>
 
-              <Button variant="danger" type="submit" className="mt-3">
+              <Button variant="danger" type="submit" className="mt-3 me-2">
                 Save Changes
               </Button>
+              <Button variant="outline-secondary" className="mt-3" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
             </Form>
+              </>
+            )}
           </div>
         </Col>
       </Row>

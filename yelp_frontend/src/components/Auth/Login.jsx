@@ -47,7 +47,7 @@ function Login() {
     <Container className="auth-container">
       <div className="auth-card">
         <h1>Welcome Back</h1>
-        <p className="text-muted">Sign in to your LocalEats account</p>
+        <p className="text-muted">Sign in to your LabPair-45 Eats account</p>
 
         {error && (
           <Alert variant="danger" className="mb-3">

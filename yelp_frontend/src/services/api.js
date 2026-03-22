@@ -70,6 +70,9 @@ export const restaurantsAPI = {
   getDetails: (restaurantId) =>
     apiClient.get(`/restaurants/${restaurantId}`),
 
+  getByUser: (userId, params) =>
+    apiClient.get(`/restaurants/user/${userId}`, { params }),
+
   create: (data) =>
     apiClient.post("/restaurants/", data),
 
@@ -78,12 +81,18 @@ export const restaurantsAPI = {
 
   delete: (restaurantId) =>
     apiClient.delete(`/restaurants/${restaurantId}`),
+
+  getOwnerDashboard: () =>
+    apiClient.get("/restaurants/owner/dashboard"),
 };
 
 // Reviews APIs
 export const reviewsAPI = {
   getByRestaurant: (restaurantId, params) =>
     apiClient.get(`/reviews/restaurant/${restaurantId}`, { params }),
+
+  getByUser: (userId, params) =>
+    apiClient.get(`/reviews/user/${userId}`, { params }),
 
   create: (restaurantId, userId, data) =>
     apiClient.post(`/reviews/restaurant/${restaurantId}`, data, {

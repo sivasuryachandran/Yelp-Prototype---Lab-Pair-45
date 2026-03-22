@@ -103,6 +103,7 @@ function RestaurantDetails() {
             ? Number(data.review_count)
             : 0,
         image_url:
+          data?.photo_data ||
           data?.image_url ||
           createdImageFromState ||
           storedImage ||
