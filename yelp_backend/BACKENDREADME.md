@@ -73,8 +73,9 @@ python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at `http://localhost:8000`
-- Swagger UI: `http://localhost:8000/docs`
+- Swagger UI: `http://localhost:8000/api/docs`
 - ReDoc: `http://localhost:8000/redoc`
+- Test using postman 
 
 ## API Endpoints
 
