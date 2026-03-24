@@ -109,7 +109,6 @@ def search_restaurants(
     return [serialize_restaurant(r) for r in restaurants]
 
 
-# ========== OWNER-SPECIFIC ENDPOINTS (MUST COME BEFORE /{restaurant_id}) ==========
 
 @router.get("/user/{user_id}", response_model=list[RestaurantResponse])
 def get_user_restaurants(
@@ -118,7 +117,7 @@ def get_user_restaurants(
     limit: int = Query(10),
     db: Session = Depends(get_db)
 ):
-    """Get all restaurants created by a specific user."""
+   
     restaurants = db.query(Restaurant).filter(
         Restaurant.owner_id == user_id
     ).offset(skip).limit(limit).all()
@@ -133,7 +132,7 @@ def get_owner_restaurants(
     limit: int = Query(10),
     db: Session = Depends(get_db)
 ):
-    """Get all restaurants owned by the current user."""
+   
     current_user = get_current_user_from_header(authorization, db)
     
     restaurants = db.query(Restaurant).filter(
@@ -151,7 +150,7 @@ def get_owner_dashboard(
     """Get owner dashboard with analytics for their restaurants."""
     current_user = get_current_user_from_header(authorization, db)
     
-    # Get all owner's restaurants
+   
     restaurants = db.query(Restaurant).filter(
         Restaurant.owner_id == current_user.id
     ).all()
@@ -167,7 +166,7 @@ def get_owner_dashboard(
     
     restaurant_ids = [r.id for r in restaurants]
     
-    # Calculate analytics
+   
     total_favorites = db.query(func.count(Favorite.id)).filter(
         Favorite.restaurant_id.in_(restaurant_ids)
     ).scalar() or 0
@@ -180,7 +179,7 @@ def get_owner_dashboard(
         Restaurant.id.in_(restaurant_ids)
     ).scalar() or 0
     
-    # Get recent reviews
+    
     recent_reviews = db.query(Review).filter(
         Review.restaurant_id.in_(restaurant_ids)
     ).order_by(Review.created_at.desc()).limit(5).all()
@@ -204,7 +203,7 @@ def get_owner_dashboard(
     }
 
 
-# ========== GENERAL RESTAURANT ENDPOINTS ==========
+
 
 @router.get("/{restaurant_id}", response_model=RestaurantResponse)
 def get_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
@@ -225,7 +224,7 @@ def create_restaurant(
     authorization: str = Header(None),
     db: Session = Depends(get_db)
 ):
-    """Create a new restaurant. Can be called by authenticated users."""
+   
     current_user = get_current_user_from_header(authorization, db)
     
     # Convert base64 photo data to binary if provided
@@ -272,7 +271,7 @@ def update_restaurant(
     authorization: str = Header(None),
     db: Session = Depends(get_db)
 ):
-    """Update restaurant. Only owner or admin can update."""
+    
     current_user = get_current_user_from_header(authorization, db)
     
     restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
