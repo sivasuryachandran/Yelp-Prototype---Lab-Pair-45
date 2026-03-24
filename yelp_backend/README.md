@@ -176,10 +176,6 @@ lsof -i :8000  # Find process on port 8000
 kill -9 <PID>  # Kill the process
 ```
 
-## Contributing
-
-Follow PEP 8 style guidelines and add tests for new features.
-
 ## License
 
 MIT License - See LICENSE file for details
