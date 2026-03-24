@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 # Try MySQL first, fall back to SQLite for development
-DB_TYPE = os.getenv("DB_TYPE", "sqlite")  # "mysql" or "sqlite"
+DB_TYPE = os.getenv("DB_TYPE", "mysql")  # "mysql" or "sqlite"
 
 if DB_TYPE == "mysql":
     DB_HOST = os.getenv("DB_HOST", "localhost")
