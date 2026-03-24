@@ -146,7 +146,6 @@ REACT_APP_API_URL=http://localhost:8000/api
 ### AI Chatbot
 - Natural language queries
 - Personalized recommendations
-- Conversation history
 - Real-time responses
 - Quick action buttons
 
