@@ -47,7 +47,6 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid email or password"
         )
     
-    # Create access token
     access_token_expires = timedelta(minutes=30)
     access_token = create_access_token(
         data={"sub": str(user.id), "role": user.role},

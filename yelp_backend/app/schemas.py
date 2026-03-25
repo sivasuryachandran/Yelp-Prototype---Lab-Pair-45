@@ -82,6 +82,7 @@ class RestaurantCreate(BaseModel):
     hours_of_operation: Optional[dict] = None
     amenities: Optional[List[str]] = None
     pricing_tier: Optional[str] = None
+    photo_data: Optional[str] = None  # Base64 encoded photo
 
 
 class RestaurantUpdate(BaseModel):
@@ -96,6 +97,7 @@ class RestaurantUpdate(BaseModel):
     hours_of_operation: Optional[dict] = None
     amenities: Optional[List[str]] = None
     pricing_tier: Optional[str] = None
+    photo_data: Optional[str] = None  # Base64 encoded photo
 
 
 class RestaurantResponse(BaseModel):
@@ -114,6 +116,7 @@ class RestaurantResponse(BaseModel):
     average_rating: float
     review_count: int
     created_at: datetime
+    photo_data: Optional[str] = None  # Base64 encoded photo
     
     class Config:
         from_attributes = True

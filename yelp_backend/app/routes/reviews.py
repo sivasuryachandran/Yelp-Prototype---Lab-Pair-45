@@ -23,6 +23,21 @@ def get_restaurant_reviews(
     return reviews
 
 
+@router.get("/user/{user_id}", response_model=list[ReviewResponse])
+def get_user_reviews(
+    user_id: int,
+    skip: int = Query(0),
+    limit: int = Query(10),
+    db: Session = Depends(get_db)
+):
+    """Get all reviews written by a user."""
+    reviews = db.query(Review).filter(
+        Review.user_id == user_id
+    ).offset(skip).limit(limit).all()
+    
+    return reviews
+
+
 @router.get("/{review_id}", response_model=ReviewResponse)
 def get_review(review_id: int, db: Session = Depends(get_db)):
     """Get a specific review."""

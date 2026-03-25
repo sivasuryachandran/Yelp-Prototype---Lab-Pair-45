@@ -27,8 +27,10 @@ if DB_TYPE == "mysql":
         echo=True
     )
 else:
-    # Use SQLite for development
-    DATABASE_URL = f"sqlite:///./yelp_dev.db"
+    # Use SQLite for development - use absolute path to ensure consistency
+    import pathlib
+    db_path = pathlib.Path(__file__).parent.parent / "yelp_dev.db"
+    DATABASE_URL = f"sqlite:///{db_path}"
     
     engine = create_engine(
         DATABASE_URL,

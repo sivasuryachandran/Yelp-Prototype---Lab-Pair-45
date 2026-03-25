@@ -150,6 +150,7 @@ function AddRestaurantForm() {
         amenities: parseAmenities(formData.amenities),
         hours_of_operation: cleanedHours,
         image_url: formData.image_url.trim(),
+        photo_data: uploadedImageDataUrl,  // Send the base64 photo data
       };
 
       const response = await restaurantsAPI.create(payload);

@@ -126,17 +126,6 @@ Create a `.env` file in the project root:
 REACT_APP_API_URL=http://localhost:8000/api
 ```
 
-## API Integration
-
-All API calls go through the `services/api.js` file:
-
-```javascript
-import { usersAPI, restaurantsAPI, reviewsAPI, aiAssistantAPI } from './services/api';
-
-// Example usage
-const profile = await usersAPI.getProfile(userId);
-const restaurants = await restaurantsAPI.search({ name: 'Pizza' });
-const chatResponse = await aiAssistantAPI.chat(message, history, userId);
 ```
 
 ## Features Implementation
@@ -157,7 +146,6 @@ const chatResponse = await aiAssistantAPI.chat(message, history, userId);
 ### AI Chatbot
 - Natural language queries
 - Personalized recommendations
-- Conversation history
 - Real-time responses
 - Quick action buttons
 
@@ -169,21 +157,6 @@ const chatResponse = await aiAssistantAPI.chat(message, history, userId);
 - Location preferences
 - Sort preferences
 
-## Styling
-
-The application uses Bootstrap 5 for components and custom CSS for additional styling:
-
-- Color scheme: Yelp red (#d1345b) as primary color
-- Responsive breakpoints: xs, sm, md, lg, xl
-- Dark navigation bar
-- White cards with shadows
-- Hover effects and transitions
-
-## Responsive Design
-
-- **Mobile** (< 576px): Single column layout
-- **Tablet** (≥ 576px): Two column layout
-- **Desktop** (≥ 992px): Multi-column layout
 
 ## Testing
 
@@ -199,80 +172,6 @@ To test the application:
    - Use AI chatbot for recommendations
    - Update profile and preferences
 
-## Common Issues
-
-**API Connection Error**:
-- Ensure backend is running on port 8000
-- Check `.env` file has correct API URL
-- Verify CORS is enabled in backend
-
-**Login Not Working**:
-- Check browser console for errors
-- Verify backend database has user records
-- Check localStorage for token storage
-
-**Chatbot Not Responding**:
-- Verify OpenAI API key in backend
-- Check backend logs for errors
-- Ensure user preferences are set
-
-## Performance Optimization
-
-- Code splitting with React.lazy
-- Image optimization
-- CSS minification
-- Lazy loading components
-- Debounced search queries
-
-## Accessibility
-
-- Semantic HTML structure
-- ARIA labels where appropriate
-- Keyboard navigation support
-- Alt text for images
-- Sufficient color contrast
-
-## Deployment
-
-### Vercel (Recommended)
-```bash
-npm install -g vercel
-vercel
-```
-
-### Netlify
-```bash
-npm run build
-netlify deploy --prod --dir=build
-```
-
-### Docker
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
-## Contributing
-
-1. Create a branch for your feature
-2. Follow React best practices
-3. Use functional components with hooks
-4. Add PropTypes or TypeScript
-5. Write descriptive commit messages
-
 ## License
 
 MIT License - See LICENSE file for details
-
-## Support
-
-For issues or questions:
-- Check existing issues on GitHub
-- Create new issue with detailed description
-- Include error messages and steps to reproduce

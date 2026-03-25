@@ -59,20 +59,30 @@ def update_user_profile(
     db: Session = Depends(get_db)
 ):
     """Update user profile."""
+    # Debug logging
+    print(f"Updating user with ID: {user_id}")
+    print(f"Update data: {user_data}")
+    
     user = db.query(User).filter(User.id == user_id).first()
     
     if not user:
+        print(f"User with ID {user_id} not found in database")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail=f"User not found with ID: {user_id}"
         )
     
+    # Only update fields that are explicitly set
     update_data = user_data.dict(exclude_unset=True)
+    print(f"Fields to update: {update_data.keys()}")
+    
     for field, value in update_data.items():
-        setattr(user, field, value)
+        if value is not None:
+            setattr(user, field, value)
     
     db.commit()
     db.refresh(user)
+    print(f"Successfully updated user {user_id}")
     
     return user
 

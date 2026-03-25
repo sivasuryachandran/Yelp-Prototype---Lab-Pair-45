@@ -16,9 +16,9 @@ A FastAPI-based backend for a Yelp-like restaurant discovery platform with AI-po
 - **Framework**: FastAPI
 - **Database**: MySQL
 - **ORM**: SQLAlchemy
-- **Authentication**: JWT (python-jose)
+- **Authentication**: JWT
 - **Password Hashing**: bcrypt
-- **AI**: Langchain + OpenAI
+- **AI**: Langchain +Local LLM(OLLAMA)
 - **API Documentation**: Swagger/OpenAPI
 
 ## Prerequisites
@@ -62,7 +62,6 @@ A FastAPI-based backend for a Yelp-like restaurant discovery platform with AI-po
      DB_PASSWORD=your_password
      DB_NAME=yelp_db
      SECRET_KEY=your-secret-key
-     OPENAI_API_KEY=your-openai-key
      TAVILY_API_KEY=your-tavily-key
      ```
 
@@ -74,8 +73,9 @@ python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at `http://localhost:8000`
-- Swagger UI: `http://localhost:8000/docs`
+- Swagger UI: `http://localhost:8000/api/docs`
 - ReDoc: `http://localhost:8000/redoc`
+- Test using postman 
 
 ## API Endpoints
 
@@ -141,12 +141,9 @@ yelp_backend/
 
 ## Testing the APIs
 
-Use Swagger UI at `http://localhost:8000/docs` or import the Postman collection:
+Use Postman and test each endpoint. 
 
 ```bash
-# Export Swagger as JSON
-curl http://localhost:8000/openapi.json > api-schema.json
-
 # Use with Postman
 # Import the schema in Postman: File > Import > Link
 ```
@@ -179,10 +176,6 @@ For production deployment:
 lsof -i :8000  # Find process on port 8000
 kill -9 <PID>  # Kill the process
 ```
-
-## Contributing
-
-Follow PEP 8 style guidelines and add tests for new features.
 
 ## License
 
